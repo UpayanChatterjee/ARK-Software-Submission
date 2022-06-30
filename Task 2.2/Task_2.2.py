@@ -33,7 +33,7 @@ params = {
 matcher_type = 'sgbm'  # or 'sgbm'
 
 
-def compute_left_disparity_map(img_left, img_right, params, matcher_type='bm'):
+def left_disparity_map(img_left, img_right, params, matcher_type='bm'):
 
     img_left_gray = cv.cvtColor(img_left, cv.COLOR_BGR2GRAY)
     img_right_gray = cv.cvtColor(img_right, cv.COLOR_BGR2GRAY)
@@ -74,43 +74,43 @@ def locate_obstacle_in_image(image, obstacle_image):
 
     cross_corr_map = cv.matchTemplate(
         image, obstacle_image, method=cv.TM_CCOEFF)
-    obstacle_location = cv.minMaxLoc(cross_corr_map)[3]
+    obs_loc = cv.minMaxLoc(cross_corr_map)[3]
 
-    return obstacle_location
+    return obs_loc
 
 
-def calculate_nearest_point(depth_map, obstacle_location, obstacle_img):
+def calculate_nearest_point(depth_map, obs_loc, obstacle_img):
 
     obstacle_height, obstacle_width, _ = obstacle_img.shape
-    obstacle_min_x_pos = obstacle_location[1]
-    obstacle_min_y_pos = obstacle_location[0]
-    distances = depth_map[obstacle_min_y_pos:obstacle_min_y_pos + obstacle_height,
-                          obstacle_min_x_pos:obstacle_min_x_pos + obstacle_width]
+    obs_min_x = obs_loc[1]
+    obs_min_y = obs_loc[0]
+    distances = depth_map[obs_min_y:obs_min_y + obstacle_height,
+                          obs_min_x:obs_min_x + obstacle_width]
     closest_point_depth = distances.min()
 
     # Create the obstacle bounding box
-    obstacle_bbox = patches.Rectangle((obstacle_min_y_pos, obstacle_min_x_pos), obstacle_width, obstacle_height,
-                                      linewidth=1, edgecolor='r', facecolor='none')
+    obs_window = patches.Rectangle((obs_min_y, obs_min_x), obstacle_width, obstacle_height,
+                                   linewidth=1, edgecolor='r', facecolor='none')
 
-    return closest_point_depth, obstacle_bbox
+    return closest_point_depth, obs_window
 
 
 def main():
-    plt.figure(figsize=(10, 10))
-    plt.gcf().canvas.set_window_title('Left')
-    plt.imshow(img_left)
-    plt.show()
+    # plt.figure(figsize=(10, 10))
+    # plt.gcf().canvas.set_window_title('Left')
+    # plt.imshow(img_left)
+    # plt.show()
 
-    plt.figure(figsize=(10, 10))
-    plt.gcf().canvas.set_window_title('Right')
-    plt.imshow(img_right)
-    plt.show()
+    # plt.figure(figsize=(10, 10))
+    # plt.gcf().canvas.set_window_title('Right')
+    # plt.imshow(img_right)
+    # plt.show()
 
-    print("p_left: ", p_left)
-    print("p_right: ", p_right)
+    # print("p_left: ", p_left)
+    # print("p_right: ", p_right)
 
     # Compute the disparity map
-    disp_left = compute_left_disparity_map(
+    disp_left = left_disparity_map(
         img_left, img_right, params, matcher_type=matcher_type)
     # Show the left disparity map
     plt.figure(figsize=(10, 10))
@@ -120,12 +120,12 @@ def main():
 
     obstacle_image = cv.imread("./bike.png")[:, :, ::-1]
 
-    obstacle_location = locate_obstacle_in_image(img_left, obstacle_image)
+    obs_loc = locate_obstacle_in_image(img_left, obstacle_image)
 
-    print("obstacle_location", obstacle_location)
+    print("Obstacle Location: ", obs_loc)
 
     # Estimating Depth
-    disp_left = compute_left_disparity_map(
+    disp_left = left_disparity_map(
         img_left, img_right, params, matcher_type=matcher_type)
     k_left, r_left, t_left = decompose_projection_matrix(p_left)
     k_right, r_right, t_right = decompose_projection_matrix(p_right)
@@ -137,16 +137,16 @@ def main():
     plt.show()
 
     # Finding the distance to collision
-    obstacle_location = locate_obstacle_in_image(
+    obs_loc = locate_obstacle_in_image(
         img_left, obstacle_image)
-    closest_point_depth, obstacle_bbox = calculate_nearest_point(
-        depth_map_left, obstacle_location, obstacle_image)
+    closest_point_depth, obs_window = calculate_nearest_point(
+        depth_map_left, obs_loc, obstacle_image)
 
     # Display the image with the bounding box displayed
     fig, ax = plt.subplots(1, figsize=(10, 10))
     plt.gcf().canvas.set_window_title('Obstacle detected')
     ax.imshow(img_left)
-    ax.add_patch(obstacle_bbox)
+    ax.add_patch(obs_window)
     plt.show()
 
     print(f"Closest point depth (meters): {closest_point_depth}")
@@ -154,4 +154,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
